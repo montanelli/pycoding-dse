@@ -28,8 +28,11 @@ weights = [0.25, 0.25, 0.5, 1]
 # grade with lists
 # iterate/loop over the grades/weights lists
 sum_modules = 0
-for i, num in enumerate(grades):
-    sum_modules += num * weights[i]
+# for i, num in enumerate(grades):
+#    sum_modules += num * weights[i]
+
+# solution based on iteration over lists with zip
+sum_modules = sum([a * b for a, b in zip(grades, weights)])
 
 grade = sum_modules / sum(weights)
 
