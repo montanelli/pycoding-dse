@@ -1,0 +1,22 @@
+Wordle is played on 02/11/2024 18:20:01.
+The target word is POOPS.
+Attempt 1: BLOGS.
+Attempt 2: GOODS.
+Attempt 3: POOPS.
+Wordle is played on 02/11/2024 18:36:42.
+The target word is THIGH.
+Attempt 1: THING.
+Attempt 2: TURBO.
+Attempt 3: THIGH.
+Wordle is played on 02/11/2024 18:57:45.
+The target word is ASNER.
+Attempt 1: BORGO.
+Attempt 2: ROUGH.
+Attempt 3: ALBER.
+Attempt 4: ALTER.
+Attempt 5: CARGO.
+Wordle is played on 02/11/2024 19:00:50.
+The target word is SKOLE.
+Attempt 1: SPOIL.
+Attempt 2: PLATE.
+Attempt 3: SKOLE.
