@@ -120,7 +120,8 @@ db.movie.aggregate(
     [
         { "$match": { "crew.give_name": "Leonardo DiCaprio" } },
         { "$group": { 
-            "_id": "Leonardo DiCaprio", "overall_movie_length": { "$sum": "$length" },
+            "_id": "Leonardo DiCaprio", 
+            "overall_movie_length": { "$sum": "$length" },
             "average_movie_length": { "$avg": "$length" } } },
         { "$project": { "_id": 0, 
             "person_name": "Leonardo DiCaprio", 
@@ -130,8 +131,15 @@ db.movie.aggregate(
 )
 
 /* calculate the average length of movies with Leonardo DiCaprio from sum and count (different result from avg. Why?) */
-/* hints: use:  
-A: { "$sum": "$length" } for sum of length,  
-B: { "$sum": 1 } for counting movies, 
-$divide to calculate the ratio between A and B */
-
+/* in the following solution the number of movies includes also movies that are associated with a length, so the denominator is higher. In $avg, only movies with a value of length are considered. */
+db.movie.aggregate(
+    [
+        { "$match": { "crew.give_name": "Leonardo DiCaprio" } },
+        { "$group": { 
+            "_id": "Leonardo DiCaprio", 
+            "overall_movie_length": { "$sum": "$length" },
+            "number_of_movies": { "$sum": 1 } } },
+        { "$project": { "_id": 0, "actor name": "$_id", "average_movie_length": { "$divide": 
+        [ "$overall_movie_length", "$number_of_movies" ] } } }
+    ]
+)

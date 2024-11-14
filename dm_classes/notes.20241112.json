@@ -1,0 +1,171 @@
+/* retrieve the movies with unique title */
+db.movie.aggregate(
+    [
+        { "$group": { "_id": "$title", "nom": { "$sum": 1 } } },
+        { "$match": { "nom": 1 } },
+        { "$project": { "_id": 0, "unique movie title": "$_id" }}
+    ])
+
+/* retrieve the number of movies with unique title */
+db.movie.aggregate(
+    [
+        { "$group": { "_id": "$title", "nom": { "$sum": 1 } } },
+        { "$match": { "nom": 1 } },
+        { "$group": { "_id": null, "count_of_movies": { "$sum": 1 } } },
+        { "$project": { "_id": 0, "count_of_movies": 1} }
+    ])
+
+/* alternative syntax */
+db.movie.aggregate(
+[
+    { "$group": { "_id": "$title", "nom": { "$sum": 1 } } },
+    { "$match": { "nom": 1 } }
+]).count()
+
+/* retrieve the movies with duplicate title */
+db.movie.aggregate(
+    [
+        { "$group": { "_id": "$title", "nom": { "$sum": 1 } } },
+        { "$match": { "nom": { "$gt": 1 } } },
+        { "$project": { "_id": 0, "unique movie title": "$_id" }}
+    ])
+
+/* retrieve the number of persons in the crew of each movie */
+/* we can use $size to count the number of elements in a list field */
+/* https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/ */
+/* attention: an error is raised if the field is not an array */
+db.movie.aggregate(
+[
+    { "$match": { "crew": {"$type": "array"} } },
+    { "$project": {"title": 1, "number of persons in the crew": { "$size": "$crew" } } }
+])
+
+/* alternative with $cond, $if, $else */
+db.movie.aggregate(
+[
+    { "$project": { "title": 1, "number of persons in the crew": { "$cond": { "if": { "$isArray": "$crew" }, "then": { "$size": "$crew" }, "else": "NA" } } } }
+])
+
+/* alternative solution with $unwind */
+/* https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/ */
+/* we include the movie title in the result */
+db.movie.aggregate(
+[
+    { "$unwind": "$crew" },
+    { "$group": { "_id": {"m_id": "$movie_id", "m_title": "$title"}, 
+    "number of crew persons": { "$sum": 1 } } }
+])
+
+/* to test the behavior of $unwind, we find movies with a crew containing less than 5 persons */
+db.movie.aggregate(
+[
+    { "$match": { "crew": {"$type": "array"} } },
+    { "$project": {"title": 1, "number of persons in the crew": { "$size": "$crew" } } },
+    { "$match": { "number of persons in the crew": { "$lte": 5 } } }
+])
+
+/* then, we observe the behavior of $unwind on a movie (The Rebel) containing only three persons in the crew */
+db.movie.aggregate(
+[
+    {"$match": { "title": "The Rebel" } },
+    {"$unwind": "$crew" }
+])
+
+/* retrieve the average number of persons in the crew of each movie */
+db.movie.aggregate(
+[
+    { "$unwind": "$crew" },
+    { "$group": { "_id": {"m_id": "$movie_id", "m_title": "$title"}, 
+    "number of crew persons": { "$sum": 1 } } },
+    { "$group": { "_id": null, "average_number_of_persons_per_movie": {"$avg": "$number of crew persons" }}}
+])
+
+
+/* retrieve the title and the score of movies rated in november 2017 */
+/* solution without aggregation */
+db.movie.find(
+{
+	"ratings": { "$elemMatch": {
+		"rating_date": {
+			"$gte": new Date("2017-11-01"),
+			"$lte": new Date("2017-11-30")
+		}
+	} }
+},
+{
+	"_id": 0,
+	"title": 1,
+	"ratings.rating_date": 1
+});
+
+/* solution with aggregation */
+db.movie.aggregate([
+	{ "$unwind": "$ratings" },
+	{ "$match": { "$and": [
+		{ "ratings.rating_date": { "$gte": new Date("2017-11-01") } },
+		{ "ratings.rating_date": { "$lte": new Date("2017-11-30") } }
+	] } 
+	},
+	{ "$project": { "_id": 0, "title": 1, "ratings.rating_date": 1 } }
+]);
+
+
+/* retrieve the actors that participated to more than 10 movies */
+db.movie.aggregate(
+[
+    { "$unwind": "$crew" },
+    { "$group": { "_id": 
+                    { "p_id": "$crew.person_id", 
+                    "p_name": "$crew.give_name"}, "number of movies": {"$sum": 1 } } },
+    { "$match": { "number of movies": { "$gt": 10 } }}
+])
+
+/* retrieve the actors that participated to more than 10 movies */
+/* only consider "actor" as a role */
+/* this solution is not efficient */
+db.movie.aggregate(
+[
+    { "$unwind": "$crew" },
+    { "$group": { "_id": 
+                    { "p_id": "$crew.person_id", 
+                    "p_name": "$crew.give_name",
+                    "p_role": "$crew.role"}, "number of movies": {"$sum": 1 } } },
+    { "$match": { "_id.p_role": "actor" } },
+    { "$match": { "number of movies": { "$gt": 10 } }}
+])
+
+/* alternative, efficient */
+db.movie.aggregate(
+[
+    { "$unwind": "$crew" },
+    { "$match": {"crew.role": "actor" } },
+    { "$group": { "_id": 
+                    { "p_id": "$crew.person_id", 
+                    "p_name": "$crew.give_name"}, "number of movies": {"$sum": 1 } } },
+    { "$match": { "number of movies": { "$gt": 10 } }}
+])
+
+
+/* retrieve the whole number of ratings provided in 2017 */
+/* solution without aggregation */
+db.movie.find(
+{
+	"ratings": { "$elemMatch": {
+		"rating_date": {
+			"$gte": new Date("2017-01-01"),
+			"$lte": new Date("2017-12-31")
+		}
+	} }
+}).count();
+
+/* solution with aggregation */
+/* si noti l'uso dell'operatore $year per estrarre l'anno di una data */
+/* https://www.mongodb.com/docs/manual/reference/operator/aggregation/year/ */
+db.movie.aggregate([
+	{ "$unwind": "$ratings" },
+	{ "$project": {"_id": 0, 
+                   "year": {"$year": "$ratings.rating_date"}
+                 } },
+    { "$match": { "year": 2017 } },
+	{ "$group": { "_id": "$year", "Number of ratings": { "$sum": 1 } } }
+]);
